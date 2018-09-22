@@ -1,7 +1,8 @@
-const prevPairs = require("./prevPairs.js");
+var fs = require('fs');
 
-function todaysPairs(prevPairs={}) {
+function todaysPairs() {
   var students = gettingStudents();
+  var prevPairs = gettingPrevPairs();
   var pairs = [];
   var secondRound = [];
   var single = [];
@@ -9,6 +10,8 @@ function todaysPairs(prevPairs={}) {
   pickUniqPairs(students, secondRound, prevPairs, pairs);
 
   let newPrevPairs = objectifyPairs(pairs, prevPairs);
+  savePrevPairs(newPrevPairs);
+
 
   if (secondRound.length !== 1) {
     students = secondRound;
@@ -29,11 +32,6 @@ function todaysPairs(prevPairs={}) {
     console.log("Single :");
     console.log(secondRound[0]);
   }
-
-  console.log("------------------------");
-  console.log("New prevPairs :");
-  console.log(newPrevPairs);
-  console.log("------------------------");
 }
 
 function getRandomInt(numOfStudents) {
@@ -46,8 +44,29 @@ function diff(arr1, arr2) {
 }
 
 function gettingStudents() {
-  var fs = require('fs');
-  return fs.readFileSync('students.txt').toString().split("\n").slice(0,-1);
+  let students = fs.readFileSync('students.txt').toString().split("\n");
+  if (students.every(element => element === "")) {
+    return [];
+  } else {
+    return students;
+  }
+}
+
+function gettingPrevPairs() {
+  let prevPairsJSONStr = fs.readFileSync('prevPairs.txt').toString();
+  if (prevPairsJSONStr.split("\n").every(element => element === "")) {
+    return {};
+  } else {
+    return JSON.parse(prevPairsJSONStr);
+  }
+}
+
+function savePrevPairs(prevPairs) {
+  fs.writeFile("prevPairs.txt", JSON.stringify(prevPairs), (error) => {
+    if (error) {
+      console.log(error);
+    }
+  });
 }
 
 function pickSecondPairs (students, secondRound, pairs, single) {
@@ -149,26 +168,4 @@ function objectifyPairs(pairs, prevPairs) {
 }
 
 
-todaysPairs(prevPairs);
-
-
-
-// TESTING:
-
-// let prevPairs = {
-//   "Cindy" : ["David", "Arittro", "Chao", "Leef", "Alvin", "Reef"],
-//   "Chao" : ["David", "Arittro", "Cindy", "Leef", "Alvin", "Reef"],
-//   "Arittro" : ["Chao", "Cindy", "Chao"],
-//   "Reef" : ["Leef", "Cindy", "Chao"],
-//   "Leef" : ["Reef", "Cindy", "Chao"],
-//   "David" : ["Cindy", "Chao"],
-//   "Alvin" : ["Cindy", "Chao"]
-// };
-//
-// console.log(prevPairs);
-//
-// ["Arittro", "Chao", "Cindy", "David", "Alvin", "Reef", "Leef"];
-// todaysPairs(prevPairs);
-//
-// ["Arittro", "Chao", "Cindy", "David", "Alvin", "Reef", "Leef", "Brian"];
-// todaysPairs(prevPairs);
+todaysPairs();

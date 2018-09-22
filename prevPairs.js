@@ -14,4 +14,8 @@ const prevPairs = {
   Aaron: [ 'Sanjay' ],
   Sanjay: [ 'Aaron' ] };
 
-module.exports = prevPairs;
+const prevPairsStr = '';
+
+console.log(JSON.parse(prevPairsStr));
+
+console.log(JSON.stringify(prevPairs));
