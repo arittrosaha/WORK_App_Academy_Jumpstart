@@ -8,6 +8,9 @@ class GoogleAPI {
   constructor(whichDay, spreadsheetId) {
     this.whichDay = whichDay;
     this.spreadsheetId = spreadsheetId;
+    this.branch = "ny_attendance";
+    this.first_name = "C:C";
+    this.last_name = "D:D";
     // If modifying these scopes, delete token.json.
     this.scopes = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
     this.token_path = './google_api_credentials/token.json';
@@ -75,7 +78,8 @@ class GoogleAPI {
       sheets.spreadsheets.values.batchGet({
         spreadsheetId: this.spreadsheetId,
         ranges: [
-          'C:C', 'D:D', this.whichDay
+          `${this.branch}!${this.first_name}`, `${this.branch}!${this.last_name}`,
+          `${this.branch}!${this.whichDay}`
         ],
         majorDimension: 'COLUMNS'
       }, (err, res) => {

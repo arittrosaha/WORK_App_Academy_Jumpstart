@@ -1,5 +1,9 @@
 Pairs:
 -------------------------------
-Abzal : Mark
-Gregory : Sanjay
-Yuri : Guy
+Cihad : Patrick
+Abdel-rahman Faisal : Korey
+Sanjay : Dwayne
+Nguyen : Gregory
+Yuri : Ryan
+Rene : Michael
+Abzal : Guy
