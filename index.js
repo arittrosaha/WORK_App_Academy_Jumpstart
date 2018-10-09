@@ -94,17 +94,18 @@ function processLink (whichDay, link, resolve) {
 }
 
 function parsingAttendence(attendence) {
-  let students = [];
   const [firstNames, lastNames, day] = attendence;
+  const studentCounts = counts(firstNames.slice(2));
+  let students = [];
   for (let i = 2; i < firstNames.length; i++) {
     if (day[i] === "x") {
       let student = firstNames[i];
-      if (!students.includes(student)) {
+      if (studentCounts[student] === 1) {
         students.push(student)
-      } else if (!students.includes(student + lastNames[i][0])) {
-        students.push(student + lastNames[i][0])
+      } else if (studentCounts[student] > 1) {
+        students.push(student + " " + lastNames[i][0])
       } else {
-        students.push(student + lastNames[i])
+        students.push(student + " " + lastNames[i])
       }
     }
   }
@@ -146,4 +147,12 @@ function properCapitalization (pair) {
     return splited.join(" ")
   });
   return students.join(" : ");
+}
+
+function counts (students) {
+  let countHash = {}
+  students.forEach((student) => {
+    countHash[student] = ((countHash[student] || 0) + 1);
+  })
+  return countHash;
 }
