@@ -17,10 +17,10 @@ const dayToColumn = {
 }
 
 const promiseAfterInput = new Promise((resolve, reject) => {
-  rl.question("Which day of the cohort? ", (whichDay) => {
+  rl.question("Which day of the cohort is today? ", (whichDay) => {
     whichDay = whichDay.toUpperCase();
     if (whichDay == "W1D4") {
-      rl.question("Provide the link, please? ", (link) => {
+      rl.question("Provide the link of the Google Sheet, please? ", (link) => {
         processLink(whichDay, link, resolve);
       });
     } else {
