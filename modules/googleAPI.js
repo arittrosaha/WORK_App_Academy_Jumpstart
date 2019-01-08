@@ -5,12 +5,11 @@ const {google} = require('googleapis');
 
 class GoogleAPI {
 
-  constructor(whichDay, spreadsheetId) {
+  constructor(whichDay, spreadsheetId, branch) {
     this.whichDay = whichDay;
     this.spreadsheetId = spreadsheetId;
-    this.branch = "ny_attendance";
-    this.first_name = "C:C";
-    this.last_name = "D:D";
+    this.branch = branch;
+    this.name = "C:C";
     // If modifying these scopes, delete token.json.
     this.scopes = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
     this.token_path = './google_api_credentials/token.json';
@@ -78,7 +77,7 @@ class GoogleAPI {
       sheets.spreadsheets.values.batchGet({
         spreadsheetId: this.spreadsheetId,
         ranges: [
-          `${this.branch}!${this.first_name}`, `${this.branch}!${this.last_name}`,
+          `${this.branch}!${this.name}`,
           `${this.branch}!${this.whichDay}`
         ],
         majorDimension: 'COLUMNS'
@@ -89,10 +88,14 @@ class GoogleAPI {
         objects.forEach((obj) => {
           data.push(obj.values[0]);
         });
-        if (this.whichDay !== "J:J") {
+        if (this.whichDay == "K:K") {
+          fs.truncateSync("./files/prevPairs.txt", 0);
+          resolve(data);
+        } else if (this.whichDay == "Q:Q") {
+          fs.truncateSync("./files/prevPairs.txt", 0);
+          fs.truncateSync("./files/cohortName.txt", 0);
           resolve(data);
         } else {
-          fs.truncateSync("./files/prevPairs.txt", 0);
           resolve(data);
         }
       });

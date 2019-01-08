@@ -1,4 +1,5 @@
 const fs = require("fs");
+const path = require("path");
 const readline = require("readline");
 const GoogleAPI = require("./modules/googleAPI.js");
 const TodaysPairs = require("./modules/todaysPairs.js");
@@ -9,51 +10,75 @@ const rl = readline.createInterface({
 });
 
 const dayToColumn = {
-  "W1D4" : "J:J",
-  "W2D1" : "L:L",
-  "W2D2" : "M:M",
-  "W2D3" : "N:N",
-  "W2D4" : "O:O",
+  "W1D4" : "K:K",
+  "W2D1" : "M:M",
+  "W2D2" : "N:N",
+  "W2D3" : "O:O",
+  "W2D4" : "P:P",
 }
 
 const promiseAfterInput = new Promise((resolve, reject) => {
-  rl.question("Which day of the cohort is today? ", (whichDay) => {
-    whichDay = whichDay.toUpperCase();
-    if (whichDay == "W1D4") {
-      rl.question("Provide the link of the Google Sheet, please? ", (link) => {
-        processLink(whichDay, link, resolve);
-      });
-    } else {
-      if (!(whichDay in dayToColumn)) {
-        console.log("Invalid day!");
-        rl.close();
-      } else {
-        var regex = spreadsheetLinkToID(prevSpreadsheetID());
-        if (!regex) {
-          rl.question("Previous Spreadsheet Id is corrupted; provide the link again, please? ", (link) => {
-            processLink(whichDay, link, resolve)
-          });
+  rl.question("Please write which day of the current cohort it is, in the following fashion - 'w1d2' or 'W2D2'. \n If it is a new cohort, write instead the cohort's name as present in the Google Sheet (i.e. 'NY-2019-01-07' or 'sf-2019-01-07').", (answer) => {
+    var answer = answer.toUpperCase();
+    if (answer.includes("NY") || answer.includes("SF")) {
+      saveCohortName(answer);
+      rl.question(
+        "Thank you for the Cohort's name! Now can you please write which day of the cohort it is (i.e. 'w1d2' or 'W2D2').",
+        whichDay => {
+          whichDay = whichDay.toUpperCase();
+          if (!(whichDay in dayToColumn)) {
+            console.log(
+              "Invalid day! Please start over by running the file again."
+            );
+            rl.close();
+          } else {
+            processSpreadSheetId(whichDay, resolve);
+          }
+        }
+      );
+    } else if (answer == "W1D4") {
+      rl.question("You have begun a new cohort! Please write the new cohort's name as present in the Google Sheet (i.e. 'NY-2019-01-07' or 'sf-2019-01-07').", cohortName => {
+        cohortName = cohortName.toUpperCase();
+        if (answer.includes("NY") || answer.includes("SF")) {
+          saveCohortName(cohortName);
+          processSpreadSheetId(answer, resolve);
         } else {
-          resolve([whichDay, regex[1]]);
+          console.log("Invalid cohort name. Please start over by running the file again.")
           rl.close();
         }
+      });
+    } else if (answer in dayToColumn) {
+      if (!readCohortName()) {
+        rl.question(
+          "Previous cohort's name is corrupted. Please, provide current cohort's name again (i.e. 'NY-2019-01-07' or 'sf-2019-01-07').",
+          cohortName => {
+            cohortName = cohortName.toUpperCase();
+            if (cohortName.includes("NY") || cohortName.includes("SF")) {
+              saveCohortName(cohortName);
+              processSpreadSheetId(answer, resolve);
+            } else {
+              console.log("Provided cohort name is invalid. Please, start over by running the file again.");
+              rl.close;
+            }
+          }
+        );
+      } else {
+        processSpreadSheetId(answer, resolve);
       }
+    } else {
+      console.log("Your input is invalid. Please start over by running the file again.");
+      rl.close();
     }
   });
 });
 
-  // const child = child_process.exec("open students.txt");
-  // console.log("closed");
-
 promiseAfterInput.then(response => {
-  var googleAPI = new GoogleAPI(dayToColumn[response[0]], response[1]);
+  var googleAPI = new GoogleAPI(dayToColumn[response[0]], response[1], response[2]);
   const content = fs.readFileSync("./google_api_credentials/credentials.json");
   const promiseAfterAttendence = googleAPI.authorize(JSON.parse(content), googleAPI.getAttendence);
   promiseAfterAttendence.then(attendence => {
-    const initialAttendance = parsingAttendence(attendence);
-    const leftStudents = earlyDeparture();
-    const students = initialAttendance.filter(name => leftStudents.indexOf(name) < 0);
-    const todaysPairs = new TodaysPairs(students);
+    const parsedAttendance = parsingAttendence(attendence);
+    const todaysPairs = new TodaysPairs(parsedAttendance);
     const results = todaysPairs.makingPairs();
     fs.writeFile("./files/pairs.txt", stringify(results), errors => {
       if (errors) {
@@ -69,56 +94,45 @@ function spreadsheetLinkToID (link) {
   return link.match(spreadsheetRegex);
 }
 
-function savingSpreadsheetID (spreadsheetId) {
-  fs.writeFile("./files/spreadsheetId.txt", JSON.stringify(spreadsheetId), errors => {
-    if (errors) {
-      console.log(errors);
-    }
-  });
-}
-
-function prevSpreadsheetID () {
-  return fs.readFileSync("./files/spreadsheetId.txt").toString();
-}
-
-function processLink (whichDay, link, resolve) {
-  var regex = spreadsheetLinkToID(link);
-  if (!regex) {
-    console.log("Invalid link!");
-    rl.close();
+function processSpreadSheetId (whichDay, resolve) {
+  var spreadsheetId = spreadsheetLinkToID(prevSpreadsheetID());
+  var cohortName = readCohortName();
+  if (!spreadsheetId) {
+    rl.question("Previous Spreadsheet Id is corrupted; Please, provide the link again? ", (link) => {
+      spreadsheetId = spreadsheetLinkToID(link);
+      if (!spreadsheetId) {
+        console.log("Invalid link! Please, start over by running the file again.");
+        rl.close();
+      } else {
+        saveSpreadsheetID(spreadsheetId[0]);
+        resolve([whichDay, spreadsheetId[1]], cohortName);
+        rl.close();
+      }
+    });
   } else {
-    savingSpreadsheetID(regex[0]);
-    resolve([whichDay, regex[1]]);
+    resolve([whichDay, spreadsheetId[1]], cohortName);
     rl.close();
   }
 }
 
 function parsingAttendence(attendence) {
-  const [firstNames, lastNames, day] = attendence;
-  const studentCounts = counts(firstNames.slice(2));
+  const [names, day] = attendence;
+  const studentCounts = counts(names.slice(2));
   let students = [];
   for (let i = 2; i < firstNames.length; i++) {
     if (day[i] === "x") {
-      let student = firstNames[i];
+      let student = names[i];
+      let [firstName, lastName] = student.split(" ");
       if (studentCounts[student] === 1) {
-        students.push(student)
+        students.push(firstName)
       } else if (studentCounts[student] > 1) {
-        students.push(student + " " + lastNames[i][0])
+        students.push(firstName + " " + lastName[0])
       } else {
-        students.push(student + " " + lastNames[i])
+        students.push(student)
       }
     }
   }
   return students;
-}
-
-function earlyDeparture() {
-  let students = fs.readFileSync("./files/earlyDepartures.txt").toString().split("\n");
-  if (students.every(element => element === "")) {
-    return [];
-  } else {
-    return students;
-  }
 }
 
 function stringify (results) {
@@ -155,4 +169,42 @@ function counts (students) {
     countHash[student] = ((countHash[student] || 0) + 1);
   })
   return countHash;
+}
+
+function readCohortName() {
+  return readFile("./files/cohortName.txt");
+}
+
+function saveCohortName(cohortName) {
+  handleFile("./files/cohortName.txt", cohortName);
+}
+
+function prevSpreadsheetID() {
+  return readFile("./files/spreadsheetId.txt");
+}
+
+function saveSpreadsheetID(spreadsheetId) {
+  handleFile("./files/spreadsheetId.txt", spreadsheetId);
+}
+
+function readFile (path) {
+  return fs.readFileSync(path).toString();
+}
+
+function saveFile (path, content) {
+  fs.writeFile(path, JSON.stringify(content), errors => {
+    if (errors) {
+      console.log(errors);
+    }
+  });
+}
+
+function handleFile (path, content) {
+  let dirname = path.dirname(path);
+  if (fs.existsSync(dirname)) {
+    saveFile(path, content);
+  } else {
+    fs.mkdirSync(dirname);
+    saveFile(path, content);
+  }
 }
