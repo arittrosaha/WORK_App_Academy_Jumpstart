@@ -91,7 +91,7 @@ class GoogleAPI {
         if (this.whichDay == "K:K") {
           fs.truncateSync("./files/prevPairs.txt", 0);
           resolve(data);
-        } else if (this.whichDay == "Q:Q") {
+        } else if (this.whichDay == "P:P") {
           fs.truncateSync("./files/prevPairs.txt", 0);
           fs.truncateSync("./files/cohortName.txt", 0);
           resolve(data);
