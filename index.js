@@ -127,8 +127,6 @@ function parsingAttendence(attendence) {
         students.push(firstName)
       } else if (studentCounts[student] > 1) {
         students.push(firstName + " " + lastName[0])
-      } else {
-        students.push(student)
       }
     }
   }
