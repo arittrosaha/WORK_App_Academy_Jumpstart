@@ -18,12 +18,12 @@ const dayToColumn = {
 }
 
 const promiseAfterInput = new Promise((resolve, reject) => {
-  rl.question("Please write which day of the current cohort it is, in the following fashion - 'w1d2' or 'W2D2'. \n If it is a new cohort, write instead the cohort's name as present in the Google Sheet (i.e. 'NY-2019-01-07' or 'sf-2019-01-07').", (answer) => {
+  rl.question("Please write which day of the current cohort it is, in the following fashion - 'w1d2' or 'W2D2'. \nIf it is a new cohort, write instead the cohort's name as present in the Google Sheet (i.e. 'NY-2019-01-07' or 'sf-2019-01-07'). \n", (answer) => {
     var answer = answer.toUpperCase();
     if (answer.includes("NY") || answer.includes("SF")) {
       saveCohortName(answer);
       rl.question(
-        "Thank you for the Cohort's name! Now can you please write which day of the cohort it is (i.e. 'w1d2' or 'W2D2').",
+        "Thank you for the Cohort's name! Now can you please write which day of the cohort it is (i.e. 'w1d2' or 'W2D2'). \n",
         whichDay => {
           whichDay = whichDay.toUpperCase();
           if (!(whichDay in dayToColumn)) {
@@ -32,47 +32,49 @@ const promiseAfterInput = new Promise((resolve, reject) => {
             );
             rl.close();
           } else {
-            processSpreadSheetId(whichDay, resolve);
+            processSpreadSheetId(whichDay, resolve, answer);
           }
         }
       );
     } else if (answer == "W1D4") {
-      rl.question("You have begun a new cohort! Please write the new cohort's name as present in the Google Sheet (i.e. 'NY-2019-01-07' or 'sf-2019-01-07').", cohortName => {
+      rl.question("You have begun a new cohort! Please write the new cohort's name as present in the Google Sheet (i.e. 'NY-2019-01-07' or 'sf-2019-01-07'). \n", cohortName => {
         cohortName = cohortName.toUpperCase();
-        if (answer.includes("NY") || answer.includes("SF")) {
+        if (cohortName.includes("NY") || cohortName.includes("SF")) {
           saveCohortName(cohortName);
-          processSpreadSheetId(answer, resolve);
+          processSpreadSheetId(answer, resolve, cohortName);
         } else {
-          console.log("Invalid cohort name. Please start over by running the file again.")
+          console.log("Invalid cohort name! Please start over by running the file again.")
           rl.close();
         }
       });
     } else if (answer in dayToColumn) {
-      if (!readCohortName()) {
+      var cohortName = readCohortName();
+      if (!cohortName && (!cohortName.includes("NY") || !cohortName.includes("SF"))) {
         rl.question(
-          "Previous cohort's name is corrupted. Please, provide current cohort's name again (i.e. 'NY-2019-01-07' or 'sf-2019-01-07').",
+          "Previous cohort's name is corrupted! Please, provide current cohort's name again (i.e. 'NY-2019-01-07' or 'sf-2019-01-07'). \n",
           cohortName => {
             cohortName = cohortName.toUpperCase();
             if (cohortName.includes("NY") || cohortName.includes("SF")) {
               saveCohortName(cohortName);
-              processSpreadSheetId(answer, resolve);
+              processSpreadSheetId(answer, resolve, cohortName);
             } else {
-              console.log("Provided cohort name is invalid. Please, start over by running the file again.");
+              console.log("Provided cohort name is invalid! Please, start over by running the file again.");
               rl.close;
             }
           }
         );
       } else {
-        processSpreadSheetId(answer, resolve);
+        processSpreadSheetId(answer, resolve, cohortName);
       }
     } else {
-      console.log("Your input is invalid. Please start over by running the file again.");
+      console.log("Your input is invalid! Please start over by running the file again.");
       rl.close();
     }
   });
 });
 
 promiseAfterInput.then(response => {
+  console.log(response);
   var googleAPI = new GoogleAPI(dayToColumn[response[0]], response[1], response[2]);
   const content = fs.readFileSync("./google_api_credentials/credentials.json");
   const promiseAfterAttendence = googleAPI.authorize(JSON.parse(content), googleAPI.getAttendence);
@@ -94,23 +96,22 @@ function spreadsheetLinkToID (link) {
   return link.match(spreadsheetRegex);
 }
 
-function processSpreadSheetId (whichDay, resolve) {
+function processSpreadSheetId (whichDay, resolve, cohortName) {
   var spreadsheetId = spreadsheetLinkToID(prevSpreadsheetID());
-  var cohortName = readCohortName();
   if (!spreadsheetId) {
-    rl.question("Previous Spreadsheet Id is corrupted; Please, provide the link again? ", (link) => {
+    rl.question("Previous Spreadsheet Id is corrupted! Please, provide the link again? \n", (link) => {
       spreadsheetId = spreadsheetLinkToID(link);
       if (!spreadsheetId) {
         console.log("Invalid link! Please, start over by running the file again.");
         rl.close();
       } else {
         saveSpreadsheetID(spreadsheetId[0]);
-        resolve([whichDay, spreadsheetId[1]], cohortName);
+        resolve([whichDay, spreadsheetId[1], cohortName]);
         rl.close();
       }
     });
   } else {
-    resolve([whichDay, spreadsheetId[1]], cohortName);
+    resolve([whichDay, spreadsheetId[1], cohortName]);
     rl.close();
   }
 }
@@ -119,7 +120,7 @@ function parsingAttendence(attendence) {
   const [names, day] = attendence;
   const studentCounts = counts(names.slice(2));
   let students = [];
-  for (let i = 2; i < firstNames.length; i++) {
+  for (let i = 2; i < names.length; i++) {
     if (day[i] === "x") {
       let student = names[i];
       let [firstName, lastName] = student.split(" ");
@@ -197,12 +198,12 @@ function saveFile (path, content) {
   });
 }
 
-function handleFile (path, content) {
-  let dirname = path.dirname(path);
+function handleFile (fullPath, content) {
+  let dirname = path.dirname(fullPath);
   if (fs.existsSync(dirname)) {
-    saveFile(path, content);
+    saveFile(fullPath, content);
   } else {
     fs.mkdirSync(dirname);
-    saveFile(path, content);
+    saveFile(fullPath, content);
   }
 }
