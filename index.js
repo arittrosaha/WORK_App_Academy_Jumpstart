@@ -74,7 +74,6 @@ const promiseAfterInput = new Promise((resolve, reject) => {
 });
 
 promiseAfterInput.then(response => {
-  console.log(response);
   var googleAPI = new GoogleAPI(dayToColumn[response[0]], response[1], response[2]);
   const content = fs.readFileSync("./google_api_credentials/credentials.json");
   const promiseAfterAttendence = googleAPI.authorize(JSON.parse(content), googleAPI.getAttendence);
